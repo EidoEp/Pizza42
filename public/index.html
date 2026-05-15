@@ -1,0 +1,178 @@
+<!doctype html>
+<meta charset="UTF-8" />
+<title>Pizza 42</title>
+
+<div id="view-loading">Loading...</div>
+
+<div id="view-error" hidden></div>
+
+<div id="view-authenticated" hidden>
+  <p>Logged in as <span id="user-email"></span></p>
+  <h1>Pizza 42</h1>
+
+  <div id="verify-banner" hidden style="background:#fff3cd;border:1px solid #ffeeba;padding:8px;margin:8px 0">
+    ⚠️ Your email is not verified. You can browse, but ordering is disabled until you click the verification link Auth0 sent to your inbox. After verifying, log out and log back in.
+  </div>
+
+  <h2>Place an Order</h2>
+  <div>
+    <label><input type="checkbox" class="item" value="Margherita" checked> Margherita ($10)</label><br>
+    <label><input type="checkbox" class="item" value="Pepperoni"> Pepperoni ($12)</label><br>
+    <label><input type="checkbox" class="item" value="Hawaiian"> Hawaiian ($13)</label><br>
+    <label><input type="checkbox" class="item" value="Veggie"> Veggie ($11)</label><br>
+    <button onclick="placeOrder()">Place Order</button>
+    <span id="order-status"></span>
+  </div>
+
+  <details>
+    <summary><strong>Order History (live, from API)</strong></summary>
+    <button onclick="loadOrders()">Refresh history</button>
+    <pre id="order-history" style="background:#f4f4f4;padding:8px"></pre>
+  </details>
+
+  <h2>Your most recent order (from ID token at login)</h2>
+  <p style="font-size:0.9em;color:#555">Read from the <code>https://pizza42.com/orders</code> claim in your ID token. This is a snapshot as of your last login &mdash; place an order, then log out and back in to see it update here.</p>
+  <div id="idtoken-orders" style="background:#eef;padding:8px"></div>
+
+  <details>
+    <summary>Show access token (debug)</summary>
+    <button onclick="showAccessToken()">Show access token</button>
+    <pre id="access-token" style="white-space:pre-wrap;word-break:break-all;background:#f4f4f4;padding:8px"></pre>
+  </details>
+
+  <details>
+    <summary>User profile (debug)</summary>
+    <pre id="user-profile"></pre>
+  </details>
+
+  <button onclick="client.logout({logoutParams:{returnTo:location.origin}})">Logout</button>
+</div>
+
+<div id="view-unauthenticated" hidden>
+  <h1>Pizza 42</h1>
+  <button onclick="client.loginWithRedirect({authorizationParams:{screen_hint:'signup'}})">Signup</button>
+  <button onclick="client.loginWithRedirect()">Login</button>
+</div>
+
+<script src="https://cdn.auth0.com/js/auth0-spa-js/2.18/auth0-spa-js.production.js"></script>
+
+<script>
+  const displayView = name => ['loading', 'error', 'authenticated', 'unauthenticated'].forEach(v => document.getElementById(`view-${v}`).hidden = v !== name);
+  const setTextContent = (id, content) => document.getElementById(id).textContent = content;
+
+  (async () => {
+    window.client = await auth0.createAuth0Client({
+      domain: 'dev-h0ag3zx80ah0xjeg.us.auth0.com',
+      clientId: 'OHqGBPsTAvH2F3aERXzzZqRNxL8TuRVi',
+      authorizationParams: {
+        redirect_uri: location.origin,
+        audience: 'https://pizza42-api',
+        scope: 'openid profile email create:orders',
+      },
+      cacheLocation: 'localstorage',
+      useRefreshTokens: true,
+    });
+
+    if (location.search.includes("error=")) {
+      const params = new URLSearchParams(location.search);
+      setTextContent("view-error", `Error: ${params.get("error")} — ${params.get("error_description")}`);
+      displayView("error");
+      history.replaceState({}, "", location.pathname);
+      return;
+    }
+
+    if (location.search.includes("code=") && location.search.includes("state=")) {
+      await window.client.handleRedirectCallback();
+      history.replaceState({}, "", location.pathname);
+    }
+
+    if (await window.client.isAuthenticated()) {
+      const user = await window.client.getUser();
+      setTextContent("user-email", user.email);
+      setTextContent("user-profile", JSON.stringify(user, null, 2));
+      if (user.email_verified !== true) {
+        document.getElementById("verify-banner").hidden = false;
+      }
+      const claims = await window.client.getIdTokenClaims();
+      const idTokenOrders = claims["https://pizza42.com/orders"] ?? [];
+      renderLatestOrder(idTokenOrders);
+      displayView("authenticated");
+      return;
+    }
+
+    displayView("unauthenticated");
+  })();
+
+  const API_BASE = '';
+  const PRICES = { Margherita: 10, Pepperoni: 12, Hawaiian: 13, Veggie: 11 };
+
+  function renderLatestOrder(orders) {
+    const el = document.getElementById("idtoken-orders");
+    if (!orders || orders.length === 0) {
+      el.textContent = "No orders yet. Place one, then log out and back in.";
+      return;
+    }
+    const latest = [...orders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+    const when = new Date(latest.createdAt).toLocaleString();
+    el.innerHTML =
+      `<strong>${latest.items.join(", ")}</strong> &mdash; $${latest.total}` +
+      `<br><span style="color:#555;font-size:0.9em">Ordered ${when} &middot; ${latest.id}</span>`;
+  }
+
+  async function showAccessToken() {
+    try {
+      const token = await window.client.getTokenSilently();
+      setTextContent("access-token", token);
+      console.log("Access token:", token);
+    } catch (err) {
+      setTextContent("access-token", "Error: " + err.message);
+      console.error(err);
+    }
+  }
+
+  async function placeOrder() {
+    const items = [...document.querySelectorAll('.item:checked')].map(el => el.value);
+    if (items.length === 0) {
+      setTextContent("order-status", " No items selected.");
+      return;
+    }
+    const total = items.reduce((sum, it) => sum + PRICES[it], 0);
+    setTextContent("order-status", " Placing...");
+    try {
+      const token = await window.client.getTokenSilently();
+      const res = await fetch(`${API_BASE}/orders`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ items, total }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setTextContent("order-status", ` Error ${res.status}: ${err.message || err.error || 'unknown'}`);
+        return;
+      }
+      const order = await res.json();
+      setTextContent("order-status", ` Placed ${order.id} ($${order.total})`);
+      loadOrders();
+    } catch (err) {
+      setTextContent("order-status", " Error: " + err.message);
+      console.error(err);
+    }
+  }
+
+  async function loadOrders() {
+    try {
+      const token = await window.client.getTokenSilently();
+      const res = await fetch(`${API_BASE}/orders`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const orders = await res.json();
+      setTextContent("order-history", JSON.stringify(orders, null, 2));
+    } catch (err) {
+      setTextContent("order-history", "Error: " + err.message);
+      console.error(err);
+    }
+  }
+</script>
