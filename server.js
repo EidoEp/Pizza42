@@ -51,9 +51,36 @@ const management = new ManagementClient({
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
-async function getUserOrders(sub) {
+async function getUserMetadata(sub) {
   const { data } = await management.users.get({ id: sub });
-  return data.user_metadata?.orders ?? [];
+  return data.user_metadata ?? {};
+}
+
+// Behavioral enrichment derived from the full order history. This is the
+// "data drives marketing" artifact: favorite topping/size, lifetime value.
+function computeStats(orders) {
+  const mode = (counts) =>
+    Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+  const pizzaCounts = {};
+  const toppingCounts = {};
+  const sizeCounts = {};
+  const crustCounts = {};
+  let lifetimeValue = 0;
+  for (const o of orders) {
+    lifetimeValue += o.total || 0;
+    if (o.pizza) pizzaCounts[o.pizza] = (pizzaCounts[o.pizza] || 0) + 1;
+    (o.toppings || []).forEach((t) => { toppingCounts[t] = (toppingCounts[t] || 0) + 1; });
+    if (o.size) sizeCounts[o.size] = (sizeCounts[o.size] || 0) + 1;
+    if (o.crust) crustCounts[o.crust] = (crustCounts[o.crust] || 0) + 1;
+  }
+  return {
+    totalOrders: orders.length,
+    lifetimeValue: Math.round(lifetimeValue * 100) / 100,
+    favoritePizza: mode(pizzaCounts),
+    favoriteSize: mode(sizeCounts),
+    favoriteCrust: mode(crustCounts),
+    favoriteTopping: mode(toppingCounts),
+  };
 }
 
 app.post('/orders', checkJwt, requiredScopes('create:orders'), async (req, res, next) => {
@@ -69,14 +96,29 @@ app.post('/orders', checkJwt, requiredScopes('create:orders'), async (req, res, 
 
     const order = {
       id: `order_${Date.now()}`,
-      items: req.body.items ?? [],
+      pizza: req.body.pizza ?? 'Margherita',
+      size: req.body.size ?? 'Personal',
+      crust: req.body.crust ?? 'Thin',
+      toppings: req.body.toppings ?? [],
       total: req.body.total ?? 0,
       createdAt: new Date().toISOString(),
     };
 
-    const existing = await getUserOrders(sub);
-    const updated = [...existing, order];
-    await management.users.update({ id: sub }, { user_metadata: { orders: updated } });
+    // Read existing metadata first so we merge (never clobber other keys).
+    const meta = await getUserMetadata(sub);
+    const orders = [...(meta.orders ?? []), order];
+    const preferences = {
+      lastPizza: order.pizza,
+      lastSize: order.size,
+      lastCrust: order.crust,
+      lastToppings: order.toppings,
+    };
+    const stats = computeStats(orders);
+
+    await management.users.update(
+      { id: sub },
+      { user_metadata: { ...meta, orders, preferences, stats } }
+    );
 
     res.status(201).json(order);
   } catch (err) {
@@ -86,8 +128,8 @@ app.post('/orders', checkJwt, requiredScopes('create:orders'), async (req, res, 
 
 app.get('/orders', checkJwt, async (req, res, next) => {
   try {
-    const orders = await getUserOrders(req.auth.payload.sub);
-    res.json(orders);
+    const meta = await getUserMetadata(req.auth.payload.sub);
+    res.json(meta.orders ?? []);
   } catch (err) {
     next(err);
   }
