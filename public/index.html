@@ -1,82 +1,260 @@
 <!doctype html>
+<html lang="en">
+<head>
 <meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Pizza 42</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #d6253b;
+    --red-dark: #b01d2f;
+    --cream: #fff7ef;
+    --ink: #2b2421;
+    --muted: #7a6f68;
+    --green: #2f8f4e;
+    --card: #ffffff;
+    --line: #efe3d8;
+    --shadow: 0 8px 28px rgba(60,30,10,.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
+  body {
+    font-family: 'Poppins', system-ui, sans-serif;
+    color: var(--ink);
+    background: var(--cream);
+    line-height: 1.5;
+  }
+  button {
+    font-family: inherit; cursor: pointer; border: none;
+    border-radius: 999px; font-weight: 600; transition: transform .08s, box-shadow .2s, background .2s;
+  }
+  button:active { transform: translateY(1px); }
+  .btn-primary {
+    background: var(--red); color: #fff; padding: 14px 28px; font-size: 1rem;
+    box-shadow: 0 6px 16px rgba(214,37,59,.35);
+  }
+  .btn-primary:hover { background: var(--red-dark); }
+  .btn-ghost {
+    background: transparent; color: var(--red); padding: 14px 28px; font-size: 1rem;
+    border: 2px solid var(--red);
+  }
+  .btn-ghost:hover { background: rgba(214,37,59,.07); }
+  .btn-small {
+    background: #f3ece4; color: var(--ink); padding: 8px 16px; font-size: .85rem; font-weight: 500;
+  }
+  .btn-small:hover { background: #e9dfd2; }
 
-<div id="view-loading">Loading...</div>
+  /* ---------- LOGIN / UNAUTH ---------- */
+  #view-unauthenticated {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background:
+      linear-gradient(rgba(28,14,6,.55), rgba(28,14,6,.62)),
+      url('/login-bg.jpg') center / cover no-repeat fixed;
+    padding: 24px;
+  }
+  .login-card {
+    background: rgba(255,255,255,.97); border-radius: 24px;
+    box-shadow: 0 20px 50px rgba(0,0,0,.45);
+    max-width: 460px; width: 100%; text-align: center; padding: 44px 36px 34px;
+    backdrop-filter: blur(2px);
+  }
+  .brand { font-size: 2.6rem; font-weight: 800; letter-spacing: -1px; }
+  .brand .num { color: var(--red); }
+  .login-card img {
+    width: 126px; max-width: 45%; height: auto; border-radius: 18px;
+    margin: 14px 0; box-shadow: 0 10px 24px rgba(60,30,10,.18);
+  }
+  .tagline { color: var(--muted); margin-bottom: 26px; font-size: 1.05rem; }
+  .login-actions { display: flex; flex-direction: column; gap: 12px; align-items: stretch; }
+  .login-foot { margin-top: 22px; font-size: .8rem; color: var(--muted); }
 
-<div id="view-error" hidden></div>
+  /* ---------- APP SHELL ---------- */
+  #view-authenticated {
+    min-height: 100vh;
+    background: url('/order-bg.jpg') center / cover no-repeat fixed;
+  }
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 28px; background: var(--card); border-bottom: 1px solid #efe3d8;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .topbar .brand { font-size: 1.5rem; }
+  .topbar .who { display: flex; align-items: center; gap: 14px; font-size: .9rem; color: var(--muted); }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px 60px; }
+  .grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 22px; align-items: start; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--card); border-radius: 18px; box-shadow: var(--shadow);
+    padding: 24px; margin-bottom: 22px;
+  }
+  .card h2 { font-size: 1.15rem; margin-bottom: 4px; }
+  .card .sub { color: var(--muted); font-size: .85rem; margin-bottom: 16px; }
+  .field { margin-bottom: 20px; }
+  .field-label { font-weight: 600; font-size: .8rem; text-transform: uppercase;
+    letter-spacing: .06em; color: var(--muted); margin-bottom: 10px; }
+  .opts { display: flex; flex-wrap: wrap; gap: 10px; }
+  .opt {
+    position: relative; border: 2px solid #ece0d3; border-radius: 14px;
+    padding: 10px 16px; cursor: pointer; font-weight: 500; font-size: .95rem;
+    user-select: none; transition: border-color .15s, background .15s, color .15s;
+  }
+  .opt input { position: absolute; opacity: 0; pointer-events: none; }
+  .opt:hover { border-color: #d8b7a0; }
+  .opt:has(input:checked) {
+    border-color: var(--red); background: rgba(214,37,59,.08); color: var(--red-dark);
+  }
+  .price-line { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 8px; }
+  #order-status { color: var(--green); font-weight: 600; font-size: .9rem; }
+  .banner {
+    background: #fff3cd; border: 1px solid #ffe19a; color: #7a5b00;
+    padding: 12px 16px; border-radius: 12px; margin-bottom: 18px; font-size: .9rem;
+  }
+  .stat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 16px; }
+  @media (max-width:520px){ .stat-grid{ grid-template-columns:1fr 1fr; } }
+  .stat {
+    background: #faf3ea; border-radius: 12px; padding: 12px; text-align: center;
+  }
+  .stat .num { font-size: 1.4rem; font-weight: 800; color: var(--red); }
+  .stat .lbl { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  .kv { font-size: .92rem; margin: 4px 0; }
+  .kv b { color: var(--muted); font-weight: 600; }
+  .recent {
+    background: #faf3ea; border-radius: 12px; padding: 16px; font-size: .95rem;
+  }
+  details { margin-top: 14px; font-size: .85rem; color: var(--muted); }
+  details pre {
+    white-space: pre-wrap; word-break: break-all; background: #2b2421; color: #f3ece4;
+    padding: 12px; border-radius: 10px; font-size: .75rem; margin-top: 8px;
+  }
+  .foot-debug { max-width: 1080px; margin: 0 auto; padding: 0 20px 40px; }
+  .foot-debug details { color: #fff; }
+  .foot-debug summary {
+    color: #fff; font-weight: 600;
+    text-shadow: 0 1px 4px rgba(0,0,0,.8);
+  }
+</style>
+</head>
+<body>
 
-<div id="view-authenticated" hidden>
-  <p>Logged in as <span id="user-email"></span></p>
-  <h1>Pizza 42</h1>
+<div id="view-loading" style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-weight:600;color:#7a6f68">Loading Pizza 42…</div>
 
-  <div id="verify-banner" hidden style="background:#fff3cd;border:1px solid #ffeeba;padding:8px;margin:8px 0">
-    ⚠️ Your email is not verified. You can browse, but ordering is disabled until you click the verification link Auth0 sent to your inbox. After verifying, log out and log back in.
+<div id="view-error" hidden style="min-height:100vh;display:flex;align-items:center;justify-content:center;color:#b01d2f;padding:24px;text-align:center"></div>
+
+<!-- ===================== LOGIN ===================== -->
+<div id="view-unauthenticated" hidden>
+  <div class="login-card">
+    <div class="brand">Pizza<span class="num"> 42</span></div>
+    <img src="/login-art.png" alt="Pizza 42">
+    <p class="tagline">Hot, fresh, and delivered fast.<br>Sign in to start your order.</p>
+    <div class="login-actions">
+      <button class="btn-primary" onclick="client.loginWithRedirect()">Log in</button>
+      <button class="btn-ghost" onclick="client.loginWithRedirect({authorizationParams:{screen_hint:'signup'}})">Create account</button>
+    </div>
+    <p class="login-foot">Secured by Auth0 &middot; email/password or Google</p>
   </div>
-
-  <h2>Build Your Pizza</h2>
-  <div>
-    <p><strong>Pizza:</strong>
-      <label><input type="radio" name="pizza" value="Margherita" checked> Margherita ($10)</label>
-      <label><input type="radio" name="pizza" value="Pepperoni"> Pepperoni ($12)</label>
-      <label><input type="radio" name="pizza" value="Hawaiian"> Hawaiian ($13)</label>
-      <label><input type="radio" name="pizza" value="Veggie"> Veggie ($11)</label>
-    </p>
-    <p><strong>Size:</strong>
-      <label><input type="radio" name="size" value="Personal" checked> Personal ($8)</label>
-      <label><input type="radio" name="size" value="M"> Medium ($11)</label>
-      <label><input type="radio" name="size" value="L"> Large ($14)</label>
-      <label><input type="radio" name="size" value="XL"> XL ($17)</label>
-    </p>
-    <p><strong>Crust:</strong>
-      <label><input type="radio" name="crust" value="Thin" checked> Thin</label>
-      <label><input type="radio" name="crust" value="Regular"> Regular</label>
-      <label><input type="radio" name="crust" value="Thick"> Thick</label>
-    </p>
-    <p><strong>Toppings ($1.50 each):</strong><br>
-      <label><input type="checkbox" class="topping" value="Olives"> Olives</label>
-      <label><input type="checkbox" class="topping" value="Onions"> Onions</label>
-      <label><input type="checkbox" class="topping" value="Anchovy"> Anchovy</label>
-      <label><input type="checkbox" class="topping" value="Corn"> Corn</label>
-      <label><input type="checkbox" class="topping" value="Parmezan"> Parmezan</label>
-    </p>
-    <button onclick="placeOrder()">Place Order — <span id="price-preview">$8.00</span></button>
-    <span id="order-status"></span>
-  </div>
-
-  <h2>Your most recent order</h2>
-  <div id="idtoken-orders" style="background:#eef;padding:8px"></div>
-
-  <h2>Your Pizza 42 Profile</h2>
-  <div id="enrich-panel" style="background:#efe;padding:8px"></div>
-
-  <details>
-    <summary><strong>Order History (live, from API)</strong></summary>
-    <button onclick="loadOrders()">Refresh history</button>
-    <pre id="order-history" style="background:#f4f4f4;padding:8px"></pre>
-  </details>
-
-  <details>
-    <summary>Access token (debug)</summary>
-    <button onclick="showAccessToken()">Show access token</button>
-    <pre id="access-token" style="white-space:pre-wrap;word-break:break-all;background:#f4f4f4;padding:8px"></pre>
-  </details>
-
-  <details>
-    <summary>User profile (debug)</summary>
-    <pre id="user-profile"></pre>
-  </details>
-
-  <button onclick="client.logout({logoutParams:{returnTo:location.origin}})">Logout</button>
 </div>
 
-<div id="view-unauthenticated" hidden style="text-align:center">
-  <h1>Pizza 42</h1>
-  <img src="/pizza.jpg" alt="Pizza 42" style="max-width:420px;width:80%;height:auto;border-radius:8px;margin:16px 0">
-  <p style="color:#555">Everybody loves our pizza. Sign in to order.</p>
-  <div>
-    <button onclick="client.loginWithRedirect({authorizationParams:{screen_hint:'signup'}})">Signup</button>
-    <button onclick="client.loginWithRedirect()">Login</button>
+<!-- ===================== APP ===================== -->
+<div id="view-authenticated" hidden>
+  <div class="topbar">
+    <div class="brand">Pizza<span class="num"> 42</span></div>
+    <div class="who">
+      <span>Hi, <span id="user-email"></span></span>
+      <button class="btn-small" onclick="client.logout({logoutParams:{returnTo:location.origin}})">Log out</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div id="verify-banner" hidden class="banner">
+      Your email isn’t verified yet. You can browse, but ordering is disabled until you click the verification link we emailed you. Verify, then log out and back in.
+    </div>
+
+    <div class="grid">
+      <!-- ORDER BUILDER -->
+      <div>
+        <div class="card">
+          <h2>Build Your Pizza</h2>
+          <p class="sub">Pick your pie, size it up, choose a crust, pile on toppings.</p>
+
+          <div class="field">
+            <div class="field-label">Choose your pizza</div>
+            <div class="opts">
+              <label class="opt"><input type="radio" name="pizza" value="Margherita" checked> Margherita · $10</label>
+              <label class="opt"><input type="radio" name="pizza" value="Pepperoni"> Pepperoni · $12</label>
+              <label class="opt"><input type="radio" name="pizza" value="Hawaiian"> Hawaiian · $13</label>
+              <label class="opt"><input type="radio" name="pizza" value="Veggie"> Veggie · $11</label>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="field-label">Size</div>
+            <div class="opts">
+              <label class="opt"><input type="radio" name="size" value="Personal" checked> Personal</label>
+              <label class="opt"><input type="radio" name="size" value="M"> Medium · +$3</label>
+              <label class="opt"><input type="radio" name="size" value="L"> Large · +$6</label>
+              <label class="opt"><input type="radio" name="size" value="XL"> XL · +$9</label>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="field-label">Crust</div>
+            <div class="opts">
+              <label class="opt"><input type="radio" name="crust" value="Thin" checked> Thin</label>
+              <label class="opt"><input type="radio" name="crust" value="Regular"> Regular</label>
+              <label class="opt"><input type="radio" name="crust" value="Thick"> Thick</label>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="field-label">Extra toppings · $1.50 each</div>
+            <div class="opts">
+              <label class="opt"><input type="checkbox" class="topping" value="Olives"> Olives</label>
+              <label class="opt"><input type="checkbox" class="topping" value="Onions"> Onions</label>
+              <label class="opt"><input type="checkbox" class="topping" value="Anchovy"> Anchovy</label>
+              <label class="opt"><input type="checkbox" class="topping" value="Corn"> Corn</label>
+              <label class="opt"><input type="checkbox" class="topping" value="Parmezan"> Parmezan</label>
+            </div>
+          </div>
+
+          <div class="price-line">
+            <button class="btn-primary" onclick="placeOrder()">Place Order — <span id="price-preview">$10.00</span></button>
+            <span id="order-status"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- SIDE: recent + profile -->
+      <div>
+        <div class="card">
+          <h2>Your most recent order</h2>
+          <div id="idtoken-orders" class="recent" style="margin-top:12px"></div>
+        </div>
+
+        <div class="card">
+          <h2>Your Pizza 42 Profile</h2>
+          <div id="enrich-panel"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot-debug">
+    <details>
+      <summary>Order history (live, from API)</summary>
+      <button class="btn-small" style="margin-top:8px" onclick="loadOrders()">Refresh history</button>
+      <pre id="order-history"></pre>
+    </details>
+    <details>
+      <summary>Access token (debug)</summary>
+      <button class="btn-small" style="margin-top:8px" onclick="showAccessToken()">Show access token</button>
+      <pre id="access-token"></pre>
+    </details>
+    <details>
+      <summary>User profile (debug)</summary>
+      <pre id="user-profile"></pre>
+    </details>
   </div>
 </div>
 
@@ -161,16 +339,17 @@
   function renderLatestOrder(orders) {
     const el = document.getElementById("idtoken-orders");
     if (!orders || orders.length === 0) {
-      el.textContent = "No orders yet. Place one, then log out and back in.";
+      el.textContent = "No orders yet — your first order will show here after your next login.";
       return;
     }
     const latest = [...orders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
     const when = new Date(latest.createdAt).toLocaleString();
-    const toppings = (latest.toppings && latest.toppings.length) ? latest.toppings.join(", ") : "no toppings";
+    const toppings = (latest.toppings && latest.toppings.length) ? latest.toppings.join(", ") : "no extra toppings";
     el.innerHTML =
-      `<strong>${latest.pizza ?? 'Pizza'} &mdash; ${latest.size} / ${latest.crust} crust</strong>` +
-      `<br>Toppings: ${toppings} &mdash; $${latest.total}` +
-      `<br><span style="color:#555;font-size:0.9em">Ordered ${when} &middot; ${latest.id}</span>`;
+      `<strong>${latest.pizza ?? 'Pizza'} — ${latest.size} / ${latest.crust} crust</strong>` +
+      `<br>Toppings: ${toppings}` +
+      `<br>Total: <strong>$${latest.total}</strong>` +
+      `<br><span style="color:#7a6f68;font-size:.85rem">Ordered ${when}</span>`;
   }
 
   function renderEnrichment(claims) {
@@ -178,18 +357,17 @@
     const prefs = claims["https://pizza42.com/preferences"] ?? {};
     const el = document.getElementById("enrich-panel");
     el.innerHTML =
-      `<strong>Behavioral (from order history):</strong><br>` +
-      `Total orders: ${stats.totalOrders ?? 0} &middot; ` +
-      `Orders last 30 days: ${stats.monthlyOrders ?? 0} &middot; ` +
-      `Lifetime value: $${stats.lifetimeValue ?? 0}<br>` +
-      `Favorite pizza: ${stats.favoritePizza ?? '—'} &middot; ` +
-      `Favorite size: ${stats.favoriteSize ?? '—'} &middot; ` +
-      `Favorite crust: ${stats.favoriteCrust ?? '—'} &middot; ` +
-      `Favorite topping: ${stats.favoriteTopping ?? '—'}<br><br>` +
-      `<strong>Last choices:</strong><br>` +
-      `Pizza: ${prefs.lastPizza ?? '—'} &middot; Size: ${prefs.lastSize ?? '—'} &middot; ` +
-      `Crust: ${prefs.lastCrust ?? '—'} &middot; ` +
-      `Toppings: ${(prefs.lastToppings && prefs.lastToppings.length) ? prefs.lastToppings.join(', ') : '—'}`;
+      `<div class="stat-grid">` +
+        `<div class="stat"><div class="num">${stats.totalOrders ?? 0}</div><div class="lbl">Orders</div></div>` +
+        `<div class="stat"><div class="num">${stats.monthlyOrders ?? 0}</div><div class="lbl">Last 30d</div></div>` +
+        `<div class="stat"><div class="num">$${stats.lifetimeValue ?? 0}</div><div class="lbl">Lifetime</div></div>` +
+      `</div>` +
+      `<div class="kv"><b>Favorite pizza:</b> ${stats.favoritePizza ?? '—'}</div>` +
+      `<div class="kv"><b>Favorite size:</b> ${stats.favoriteSize ?? '—'}</div>` +
+      `<div class="kv"><b>Favorite crust:</b> ${stats.favoriteCrust ?? '—'}</div>` +
+      `<div class="kv"><b>Favorite topping:</b> ${stats.favoriteTopping ?? '—'}</div>` +
+      `<div class="kv" style="margin-top:10px"><b>Last order:</b> ${prefs.lastPizza ?? '—'}, ${prefs.lastSize ?? '—'}, ${prefs.lastCrust ?? '—'} crust` +
+      `${(prefs.lastToppings && prefs.lastToppings.length) ? ' + ' + prefs.lastToppings.join(', ') : ''}</div>`;
   }
 
   async function showAccessToken() {
@@ -207,7 +385,7 @@
     const crust = selectedCrust();
     const toppings = selectedToppings();
     const total = computeTotal();
-    setTextContent("order-status", " Placing...");
+    setTextContent("order-status", " Placing…");
     try {
       const token = await window.client.getTokenSilently();
       const res = await fetch(`${API_BASE}/orders`, {
@@ -224,7 +402,7 @@
         return;
       }
       const order = await res.json();
-      setTextContent("order-status", ` Placed ${order.id} ($${order.total})`);
+      setTextContent("order-status", ` Order placed! ${order.id} · $${order.total}`);
       loadOrders();
     } catch (err) {
       setTextContent("order-status", " Error: " + err.message);
@@ -244,3 +422,5 @@
     }
   }
 </script>
+</body>
+</html>
