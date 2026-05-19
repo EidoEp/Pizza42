@@ -94,13 +94,34 @@ app.post('/orders', checkJwt, requiredScopes('create:orders'), async (req, res, 
       });
     }
 
+    // Defense in depth: high-value orders must have been authenticated with
+    // MFA. The Post-Login Action stamps the auth methods onto the access
+    // token; we enforce it server-side so the rule can't be bypassed in the UI.
+    const HIGH_VALUE = 250;
+    const orderTotal = req.body.total ?? 0;
+    if (orderTotal > HIGH_VALUE) {
+      const mfaDone =
+        req.auth.payload['https://pizza42.com/mfa'] === true ||
+        (req.auth.payload['https://pizza42.com/amr'] || []).includes('mfa');
+      if (!mfaDone) {
+        return res.status(403).json({
+          error: 'mfa_required',
+          message:
+            'Step-up verification was not completed for this $' +
+            orderTotal +
+            ' order. Please finish the MFA challenge at checkout and retry.',
+        });
+      }
+    }
+
     const order = {
       id: `order_${Date.now()}`,
       pizza: req.body.pizza ?? 'Margherita',
       size: req.body.size ?? 'Personal',
       crust: req.body.crust ?? 'Thin',
       toppings: req.body.toppings ?? [],
-      total: req.body.total ?? 0,
+      quantity: req.body.quantity ?? 1,
+      total: orderTotal,
       createdAt: new Date().toISOString(),
     };
 

@@ -218,6 +218,13 @@
             </div>
           </div>
 
+          <div class="field">
+            <div class="field-label">How many pizzas?</div>
+            <input id="qty" type="number" min="1" max="99" value="1"
+              style="width:90px;padding:10px 12px;border:2px solid #ece0d3;border-radius:12px;font:inherit;font-weight:600">
+            <span style="color:var(--muted);font-size:.85rem;margin-left:10px">Orders over $250 require step-up MFA at checkout.</span>
+          </div>
+
           <div class="price-line">
             <button class="btn-primary" onclick="placeOrder()">Place Order — <span id="price-preview">$10.00</span></button>
             <span id="order-status"></span>
@@ -268,6 +275,13 @@
   const SIZE_UPCHARGE = { Personal: 0, M: 3, L: 6, XL: 9 };
   const TOPPING_PRICE = 1.5;
   const API_BASE = '';
+  const MFA_THRESHOLD = 250;
+  const STEPUP_ACR = 'http://schemas.openid.net/pape/policies/2007/06/multi-factor';
+
+  function selectedQty() {
+    const v = parseInt(document.getElementById('qty').value, 10);
+    return (isNaN(v) || v < 1) ? 1 : v;
+  }
 
   function selectedPizza() {
     return document.querySelector('input[name="pizza"]:checked').value;
@@ -282,9 +296,10 @@
     return [...document.querySelectorAll('.topping:checked')].map(el => el.value);
   }
   function computeTotal() {
-    return PIZZA_PRICES[selectedPizza()]
+    const unit = PIZZA_PRICES[selectedPizza()]
       + SIZE_UPCHARGE[selectedSize()]
       + selectedToppings().length * TOPPING_PRICE;
+    return unit * selectedQty();
   }
   function refreshPrice() {
     document.getElementById('price-preview').textContent = '$' + computeTotal().toFixed(2);
@@ -328,6 +343,7 @@
       renderEnrichment(claims);
       document.querySelectorAll('input[name="pizza"], input[name="size"], .topping').forEach(el =>
         el.addEventListener('change', refreshPrice));
+      document.getElementById('qty').addEventListener('input', refreshPrice);
       refreshPrice();
       displayView("authenticated");
       return;
@@ -384,17 +400,33 @@
     const size = selectedSize();
     const crust = selectedCrust();
     const toppings = selectedToppings();
+    const quantity = selectedQty();
     const total = computeTotal();
+    const highValue = total > MFA_THRESHOLD;
     setTextContent("order-status", " Placing…");
     try {
-      const token = await window.client.getTokenSilently();
+      let token;
+      if (highValue) {
+        // Step-up: high-value checkout forces an interactive MFA challenge,
+        // even though the user is already logged in. getTokenWithPopup runs
+        // /authorize WITH the step-up acr in a popup and RETURNS the access
+        // token minted by that MFA'd transaction — so we never fall back to
+        // the stale pre-step-up cached token.
+        setTextContent("order-status", ` Order is $${total.toFixed(2)} — confirming it's you (step-up MFA)…`);
+        token = await window.client.getTokenWithPopup({
+          authorizationParams: { acr_values: STEPUP_ACR },
+          cacheMode: 'off',
+        });
+      } else {
+        token = await window.client.getTokenSilently();
+      }
       const res = await fetch(`${API_BASE}/orders`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ pizza, size, crust, toppings, total }),
+        body: JSON.stringify({ pizza, size, crust, toppings, quantity, total }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
