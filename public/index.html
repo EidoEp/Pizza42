@@ -395,6 +395,17 @@
     }
   }
 
+  async function postOrder(token, body) {
+    return fetch(`${API_BASE}/orders`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(body),
+    });
+  }
+
   async function placeOrder() {
     const pizza = selectedPizza();
     const size = selectedSize();
@@ -403,15 +414,12 @@
     const quantity = selectedQty();
     const total = computeTotal();
     const highValue = total > MFA_THRESHOLD;
+    const body = { pizza, size, crust, toppings, quantity, total };
     setTextContent("order-status", " Placing…");
     try {
       let token;
       if (highValue) {
-        // Step-up: high-value checkout forces an interactive MFA challenge,
-        // even though the user is already logged in. getTokenWithPopup runs
-        // /authorize WITH the step-up acr in a popup and RETURNS the access
-        // token minted by that MFA'd transaction — so we never fall back to
-        // the stale pre-step-up cached token.
+        // High-value checkout forces an interactive step-up MFA challenge.
         setTextContent("order-status", ` Order is $${total.toFixed(2)} — confirming it's you (step-up MFA)…`);
         token = await window.client.getTokenWithPopup({
           authorizationParams: { acr_values: STEPUP_ACR },
@@ -420,14 +428,26 @@
       } else {
         token = await window.client.getTokenSilently();
       }
-      const res = await fetch(`${API_BASE}/orders`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ pizza, size, crust, toppings, quantity, total }),
-      });
+
+      let res = await postOrder(token, body);
+
+      // The token minted by the popup that PERFORMED the challenge doesn't yet
+      // carry the MFA claim (the Action runs before the challenge completes).
+      // The session now has MFA, so silently re-acquire a token — this one
+      // carries it — and retry once. No second prompt: MFA is already
+      // satisfied, so the popup returns immediately without challenging.
+      if (highValue && res.status === 403) {
+        const err = await res.clone().json().catch(() => ({}));
+        if (err.error === 'mfa_required') {
+          setTextContent("order-status", " Finalizing verification…");
+          const freshToken = await window.client.getTokenWithPopup({
+            authorizationParams: { acr_values: STEPUP_ACR },
+            cacheMode: 'off',
+          });
+          res = await postOrder(freshToken, body);
+        }
+      }
+
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         setTextContent("order-status", ` Error ${res.status}: ${err.message || err.error || 'unknown'}`);
