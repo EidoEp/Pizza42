@@ -179,6 +179,17 @@
           <p class="sub">Pick your pie, size it up, choose a crust, pile on toppings.</p>
 
           <div class="field">
+            <div class="field-label">Your Pizza 42 store</div>
+            <div class="opts">
+              <label class="opt"><input type="radio" name="store" value="London - Soho" checked> London &mdash; Soho</label>
+              <label class="opt"><input type="radio" name="store" value="Paris - Le Marais"> Paris &mdash; Le Marais</label>
+              <label class="opt"><input type="radio" name="store" value="Berlin - Mitte"> Berlin &mdash; Mitte</label>
+              <label class="opt"><input type="radio" name="store" value="Madrid - Centro"> Madrid &mdash; Centro</label>
+              <label class="opt"><input type="radio" name="store" value="Amsterdam - Jordaan"> Amsterdam &mdash; Jordaan</label>
+            </div>
+          </div>
+
+          <div class="field">
             <div class="field-label">Choose your pizza</div>
             <div class="opts">
               <label class="opt"><input type="radio" name="pizza" value="Margherita" checked> Margherita · $10</label>
@@ -283,6 +294,9 @@
     return (isNaN(v) || v < 1) ? 1 : v;
   }
 
+  function selectedStore() {
+    return document.querySelector('input[name="store"]:checked').value;
+  }
   function selectedPizza() {
     return document.querySelector('input[name="pizza"]:checked').value;
   }
@@ -364,6 +378,7 @@
     el.innerHTML =
       `<strong>${latest.pizza ?? 'Pizza'} — ${latest.size} / ${latest.crust} crust</strong>` +
       `<br>Toppings: ${toppings}` +
+      `<br>Store: ${latest.store ?? '—'}` +
       `<br>Total: <strong>$${latest.total}</strong>` +
       `<br><span style="color:#7a6f68;font-size:.85rem">Ordered ${when}</span>`;
   }
@@ -378,12 +393,14 @@
         `<div class="stat"><div class="num">${stats.monthlyOrders ?? 0}</div><div class="lbl">Last 30d</div></div>` +
         `<div class="stat"><div class="num">$${stats.lifetimeValue ?? 0}</div><div class="lbl">Lifetime</div></div>` +
       `</div>` +
+      `<div class="kv"><b>Favorite store:</b> ${stats.favoriteStore ?? '—'}</div>` +
       `<div class="kv"><b>Favorite pizza:</b> ${stats.favoritePizza ?? '—'}</div>` +
       `<div class="kv"><b>Favorite size:</b> ${stats.favoriteSize ?? '—'}</div>` +
       `<div class="kv"><b>Favorite crust:</b> ${stats.favoriteCrust ?? '—'}</div>` +
       `<div class="kv"><b>Favorite topping:</b> ${stats.favoriteTopping ?? '—'}</div>` +
       `<div class="kv" style="margin-top:10px"><b>Last order:</b> ${prefs.lastPizza ?? '—'}, ${prefs.lastSize ?? '—'}, ${prefs.lastCrust ?? '—'} crust` +
-      `${(prefs.lastToppings && prefs.lastToppings.length) ? ' + ' + prefs.lastToppings.join(', ') : ''}</div>`;
+      `${(prefs.lastToppings && prefs.lastToppings.length) ? ' + ' + prefs.lastToppings.join(', ') : ''}` +
+      ` @ ${prefs.lastStore ?? '—'}</div>`;
   }
 
   async function showAccessToken() {
@@ -407,6 +424,7 @@
   }
 
   async function placeOrder() {
+    const store = selectedStore();
     const pizza = selectedPizza();
     const size = selectedSize();
     const crust = selectedCrust();
@@ -414,7 +432,7 @@
     const quantity = selectedQty();
     const total = computeTotal();
     const highValue = total > MFA_THRESHOLD;
-    const body = { pizza, size, crust, toppings, quantity, total };
+    const body = { store, pizza, size, crust, toppings, quantity, total };
     setTextContent("order-status", " Placing…");
     try {
       let token;

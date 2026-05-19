@@ -65,6 +65,7 @@ function computeStats(orders) {
   const toppingCounts = {};
   const sizeCounts = {};
   const crustCounts = {};
+  const storeCounts = {};
   let lifetimeValue = 0;
   for (const o of orders) {
     lifetimeValue += o.total || 0;
@@ -72,10 +73,12 @@ function computeStats(orders) {
     (o.toppings || []).forEach((t) => { toppingCounts[t] = (toppingCounts[t] || 0) + 1; });
     if (o.size) sizeCounts[o.size] = (sizeCounts[o.size] || 0) + 1;
     if (o.crust) crustCounts[o.crust] = (crustCounts[o.crust] || 0) + 1;
+    if (o.store) storeCounts[o.store] = (storeCounts[o.store] || 0) + 1;
   }
   return {
     totalOrders: orders.length,
     lifetimeValue: Math.round(lifetimeValue * 100) / 100,
+    favoriteStore: mode(storeCounts),
     favoritePizza: mode(pizzaCounts),
     favoriteSize: mode(sizeCounts),
     favoriteCrust: mode(crustCounts),
@@ -111,6 +114,7 @@ app.post('/orders', checkJwt, requiredScopes('create:orders'), async (req, res, 
 
     const order = {
       id: `order_${Date.now()}`,
+      store: req.body.store ?? 'London - Soho',
       pizza: req.body.pizza ?? 'Margherita',
       size: req.body.size ?? 'Personal',
       crust: req.body.crust ?? 'Thin',
@@ -126,6 +130,7 @@ app.post('/orders', checkJwt, requiredScopes('create:orders'), async (req, res, 
     const meta = await getUserMetadata(sub);
     const orders = [...(meta.orders ?? []), order];
     const preferences = {
+      lastStore: order.store,
       lastPizza: order.pizza,
       lastSize: order.size,
       lastCrust: order.crust,
