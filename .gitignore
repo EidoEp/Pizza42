@@ -3,8 +3,5 @@ node_modules/
 .env.local
 _legacy/
 
-# Confidential AE briefing — never commit to the remote repo
-docs/*Confidential*.docx
-
-# Internal working diagrams — keep local only
-docs/diagrams/
+# Internal interview / POC materials — keep local, never push to the public repo
+docs/
