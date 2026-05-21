@@ -158,6 +158,158 @@ app.get('/orders', checkJwt, async (req, res, next) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// GDPR self-service. Every endpoint is scoped to req.auth.payload.sub, so a
+// caller can only act on their own record (URL never names a user_id).
+//   GET  /me              Art 15 — right of access
+//   GET  /me/export       Art 20 — right to data portability (JSON download)
+//   PATCH /me             Art 16 — right to rectification (name only)
+//   POST /me/consent      Art 7  — withdraw / give marketing consent
+//   DELETE /me            Art 17 — right to erasure
+//
+// M2M scopes required (Dashboard → Applications → [M2M] → APIs → Mgmt API):
+//   update:users                 already granted
+//   delete:users                 ADD — needed for DELETE /me (Art 17)
+//   read:logs, read:logs_users   ADD (optional) — recent_logins in GET /me
+//   read:authentication_methods  ADD (optional) — factor list in GET /me
+// Missing optional scopes degrade gracefully (those fields become [] / null).
+// ---------------------------------------------------------------------------
+async function getMeView(sub) {
+  const { data: user } = await management.users.get({ id: sub });
+  const profile = {
+    user_id: user.user_id,
+    email: user.email,
+    email_verified: user.email_verified,
+    name: user.name,
+    given_name: user.given_name,
+    family_name: user.family_name,
+    nickname: user.nickname,
+    picture: user.picture,
+    created_at: user.created_at,
+    updated_at: user.updated_at,
+    last_login: user.last_login,
+    last_ip: user.last_ip,
+    logins_count: user.logins_count,
+    identities: (user.identities ?? []).map((i) => ({
+      provider: i.provider,
+      connection: i.connection,
+      user_id: i.user_id,
+      isSocial: i.isSocial,
+    })),
+  };
+  const m = user.user_metadata ?? {};
+  const metadata = {
+    preferred_name: m.preferred_name ?? null,
+    orders: m.orders ?? [],
+    preferences: m.preferences ?? null,
+    stats: m.stats ?? null,
+    marketing_consent: m.marketing_consent ?? null,
+    lastLoginContext: m.lastLoginContext ?? null,
+  };
+  let recent_logins = [];
+  try {
+    const { data: logs } = await management.logs.getAll({
+      q: `user_id:"${sub}"`, sort: 'date:-1', per_page: 10, page: 0,
+    });
+    recent_logins = (logs ?? []).map((l) => ({
+      date: l.date,
+      type: l.type,
+      description: l.description,
+      ip: l.ip,
+      user_agent: l.user_agent,
+      location: l.location_info
+        ? { city: l.location_info.city_name, country: l.location_info.country_name }
+        : null,
+    }));
+  } catch { recent_logins = []; }
+  let authentication_methods = [];
+  try {
+    const { data: methods } = await management.users.getAuthenticationMethods({ id: sub });
+    authentication_methods = (methods ?? []).map((x) => ({
+      id: x.id, type: x.type, name: x.name, created_at: x.created_at,
+    }));
+  } catch { authentication_methods = []; }
+  return { profile, metadata, recent_logins, authentication_methods };
+}
+
+app.get('/me', checkJwt, async (req, res, next) => {
+  try { res.json(await getMeView(req.auth.payload.sub)); }
+  catch (err) { next(err); }
+});
+
+app.get('/me/export', checkJwt, async (req, res, next) => {
+  try {
+    const view = await getMeView(req.auth.payload.sub);
+    const payload = {
+      controller: 'Pizza 42',
+      gdpr_article: 'Article 20 — Right to data portability',
+      exported_at: new Date().toISOString(),
+      data: view,
+    };
+    res.set('Content-Type', 'application/json');
+    res.set('Content-Disposition',
+      `attachment; filename="pizza42-my-data-${Date.now()}.json"`);
+    res.send(JSON.stringify(payload, null, 2));
+  } catch (err) { next(err); }
+});
+
+app.patch('/me', checkJwt, async (req, res, next) => {
+  // Writes user_metadata.preferred_name (the controller-owned display name),
+  // NOT the root profile `name`. The root name is owned by the connection's
+  // upstream IdP (Google/Apple/...) and is rejected for social/enterprise
+  // users; user_metadata is always writable regardless of connection type.
+  try {
+    const sub = req.auth.payload.sub;
+    if (typeof req.body.name !== 'string') {
+      return res.status(400).json({ error: 'invalid_body',
+        message: 'Send { name }.' });
+    }
+    const trimmed = req.body.name.trim();
+    if (trimmed.length === 0 || trimmed.length > 80) {
+      return res.status(400).json({ error: 'invalid_name',
+        message: 'Name must be 1–80 characters.' });
+    }
+    const meta = await getUserMetadata(sub);
+    await management.users.update(
+      { id: sub },
+      { user_metadata: { ...meta, preferred_name: trimmed } },
+    );
+    res.json({ ok: true, preferred_name: trimmed });
+  } catch (err) { next(err); }
+});
+
+app.post('/me/consent', checkJwt, async (req, res, next) => {
+  try {
+    const sub = req.auth.payload.sub;
+    if (typeof req.body.marketing !== 'boolean') {
+      return res.status(400).json({ error: 'invalid_body',
+        message: 'Send { marketing: boolean }.' });
+    }
+    const meta = await getUserMetadata(sub);
+    const consent = {
+      marketing: req.body.marketing,
+      at: new Date().toISOString(),
+      ip: req.ip,
+      source: 'self-service-toggle',
+    };
+    await management.users.update(
+      { id: sub },
+      { user_metadata: { ...meta, marketing_consent: consent } },
+    );
+    res.json({ ok: true, marketing_consent: consent });
+  } catch (err) { next(err); }
+});
+
+app.delete('/me', checkJwt, async (req, res, next) => {
+  try {
+    // Removes the Auth0 identity record + factors. Tenant logs retain per
+    // Auth0 policy; Pizza 42 order records held under another lawful basis
+    // (GDPR Art 17(3)) are NOT touched here — the UI surfaces that.
+    await management.users.delete({ id: req.auth.payload.sub });
+    res.json({ ok: true, deleted: req.auth.payload.sub });
+  } catch (err) { next(err); }
+});
+
 app.use((err, _req, res, _next) => {
   console.error(err.name, err.message);
   if (err.name === 'UnauthorizedError' || err.status === 401) {

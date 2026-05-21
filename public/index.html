@@ -73,31 +73,116 @@
   /* ---------- APP SHELL ---------- */
   #view-authenticated {
     min-height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;   /* topbar · wrap · foot-debug */
     background: url('/order-bg.jpg') center / cover no-repeat fixed;
   }
+  #view-privacy {
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    background:
+      linear-gradient(rgba(255,247,239,.92), rgba(255,247,239,.96)),
+      url('/order-bg.jpg') center / cover no-repeat fixed;
+  }
+  #view-privacy .wrap { max-width: 760px; }
+  #view-privacy .lead {
+    color: var(--muted); font-size: .95rem; margin: 4px 0 22px;
+  }
+
+  /* ---------- Privacy & Data: visual hierarchy ---------- */
+  .priv-stats {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+    margin-bottom: 22px;
+  }
+  @media (min-width: 560px) {
+    .priv-stats { grid-template-columns: repeat(4, 1fr); }
+  }
+  .priv-stat {
+    background: #faf3ea; border-radius: 10px; padding: 10px 12px;
+    border-left: 3px solid #d8b7a0;
+  }
+  .priv-stat-label {
+    font-size: .65rem; text-transform: uppercase; letter-spacing: .06em;
+    color: var(--muted); font-weight: 700; margin-bottom: 4px;
+  }
+  .priv-stat-value {
+    font-size: .9rem; font-weight: 700; color: var(--ink); word-break: break-word;
+  }
+  .priv-stat-value small {
+    font-size: .7rem; font-weight: 500; color: var(--green); margin-left: 4px;
+  }
+  .priv-stat-value small.bad { color: #b01d2f; }
+
+  .priv-art {
+    background: #faf5ee;
+    border-left: 4px solid var(--art-accent, #d8b7a0);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+  .priv-art-head {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 6px;
+  }
+  .priv-badge {
+    background: var(--art-accent); color: #fff;
+    font-size: .68rem; font-weight: 800; letter-spacing: .04em;
+    padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+  }
+  .priv-art-title { font-size: 1.02rem; font-weight: 700; color: var(--ink); }
+  .priv-art-desc { font-size: .82rem; color: var(--muted); margin-bottom: 10px; line-height: 1.45; }
+  .priv-art-ctl { display: block; }
+  .priv-art-status { font-size: .78rem; color: var(--muted); margin-top: 6px; }
+
+  .priv-art--rectify     { --art-accent: #4f7cc4; }   /* blue   */
+  .priv-art--consent     { --art-accent: #f0a23a; }   /* amber  */
+  .priv-art--portability { --art-accent: #43c59e; }   /* green  */
+  .priv-art--access      { --art-accent: #9b6dd7; }   /* purple */
+  .priv-art--erasure {
+    --art-accent: #d6253b;
+    background: #fef3f3;
+    border: 1px solid #ffd0d6; border-left: 4px solid #d6253b;
+    margin-top: 18px;
+  }
+
+  .priv-logins {
+    list-style: none; padding: 0; margin: 0;
+    font-size: .82rem; color: var(--ink);
+  }
+  .priv-logins li {
+    padding: 6px 8px; border-radius: 6px;
+    display: grid; grid-template-columns: 1fr auto; gap: 8px;
+  }
+  .priv-logins li:nth-child(odd) { background: rgba(0,0,0,.025); }
+  .priv-logins .priv-log-when { font-weight: 600; }
+  .priv-logins .priv-log-meta { color: var(--muted); font-size: .72rem; }
   .topbar {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 16px 28px; background: var(--card); border-bottom: 1px solid #efe3d8;
+    padding: 8px 24px; background: var(--card); border-bottom: 1px solid #efe3d8;
     position: sticky; top: 0; z-index: 10;
   }
-  .topbar .brand { font-size: 1.5rem; }
-  .topbar .who { display: flex; align-items: center; gap: 14px; font-size: .9rem; color: var(--muted); }
-  .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px 60px; }
-  .grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 22px; align-items: start; }
+  .topbar .brand { font-size: 1.25rem; }
+  .topbar .left { display: flex; align-items: center; gap: 14px; }
+  .topbar .greet { font-size: .85rem; color: var(--muted); }
+  .topbar .who { display: flex; align-items: center; gap: 10px; font-size: .85rem; color: var(--muted); }
+  .topbar .btn-small { padding: 6px 12px; font-size: .8rem; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 12px 20px 18px;
+    width: 100%; align-self: center; }
+  .grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 14px; align-items: start; }
   @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
   .card {
-    background: var(--card); border-radius: 18px; box-shadow: var(--shadow);
-    padding: 24px; margin-bottom: 22px;
+    background: var(--card); border-radius: 14px; box-shadow: var(--shadow);
+    padding: 14px 18px; margin-bottom: 12px;
   }
-  .card h2 { font-size: 1.15rem; margin-bottom: 4px; }
-  .card .sub { color: var(--muted); font-size: .85rem; margin-bottom: 16px; }
-  .field { margin-bottom: 20px; }
-  .field-label { font-weight: 600; font-size: .8rem; text-transform: uppercase;
-    letter-spacing: .06em; color: var(--muted); margin-bottom: 10px; }
-  .opts { display: flex; flex-wrap: wrap; gap: 10px; }
+  .card h2 { font-size: 1rem; margin-bottom: 2px; }
+  .card .sub { color: var(--muted); font-size: .78rem; margin-bottom: 10px; }
+  .field { margin-bottom: 9px; }
+  .field-label { font-weight: 600; font-size: .68rem; text-transform: uppercase;
+    letter-spacing: .06em; color: var(--muted); margin-bottom: 4px; }
+  .opts { display: flex; flex-wrap: wrap; gap: 5px; }
   .opt {
-    position: relative; border: 2px solid #ece0d3; border-radius: 14px;
-    padding: 10px 16px; cursor: pointer; font-weight: 500; font-size: .95rem;
+    position: relative; border: 2px solid #ece0d3; border-radius: 10px;
+    padding: 4px 10px; cursor: pointer; font-weight: 500; font-size: .82rem;
     user-select: none; transition: border-color .15s, background .15s, color .15s;
   }
   .opt input { position: absolute; opacity: 0; pointer-events: none; }
@@ -105,30 +190,31 @@
   .opt:has(input:checked) {
     border-color: var(--red); background: rgba(214,37,59,.08); color: var(--red-dark);
   }
-  .price-line { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 8px; }
-  #order-status { color: var(--green); font-weight: 600; font-size: .9rem; }
+  .price-line { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
+  .price-line .btn-primary { padding: 10px 22px; font-size: .95rem; }
+  #order-status { color: var(--green); font-weight: 600; font-size: .85rem; }
   .banner {
     background: #fff3cd; border: 1px solid #ffe19a; color: #7a5b00;
-    padding: 12px 16px; border-radius: 12px; margin-bottom: 18px; font-size: .9rem;
+    padding: 8px 14px; border-radius: 10px; margin-bottom: 10px; font-size: .85rem;
   }
-  .stat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 16px; }
+  .stat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 8px; }
   @media (max-width:520px){ .stat-grid{ grid-template-columns:1fr 1fr; } }
   .stat {
-    background: #faf3ea; border-radius: 12px; padding: 12px; text-align: center;
+    background: #faf3ea; border-radius: 10px; padding: 7px 6px; text-align: center;
   }
-  .stat .num { font-size: 1.4rem; font-weight: 800; color: var(--red); }
-  .stat .lbl { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
-  .kv { font-size: .92rem; margin: 4px 0; }
+  .stat .num { font-size: 1.15rem; font-weight: 800; color: var(--red); }
+  .stat .lbl { font-size: .65rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  .kv { font-size: .82rem; margin: 2px 0; }
   .kv b { color: var(--muted); font-weight: 600; }
   .recent {
-    background: #faf3ea; border-radius: 12px; padding: 16px; font-size: .95rem;
+    background: #faf3ea; border-radius: 10px; padding: 10px 12px; font-size: .85rem;
   }
-  details { margin-top: 14px; font-size: .85rem; color: var(--muted); }
+  details { margin-top: 8px; font-size: .8rem; color: var(--muted); }
   details pre {
     white-space: pre-wrap; word-break: break-all; background: #2b2421; color: #f3ece4;
-    padding: 12px; border-radius: 10px; font-size: .75rem; margin-top: 8px;
+    padding: 10px; border-radius: 8px; font-size: .72rem; margin-top: 6px;
   }
-  .foot-debug { max-width: 1080px; margin: 0 auto; padding: 0 20px 40px; }
+  .foot-debug { max-width: 1100px; margin: 0 auto; padding: 0 20px 14px; }
   .foot-debug details { color: #fff; }
   .foot-debug summary {
     color: #fff; font-weight: 600;
@@ -159,9 +245,12 @@
 <!-- ===================== APP ===================== -->
 <div id="view-authenticated" hidden>
   <div class="topbar">
-    <div class="brand">Pizza<span class="num"> 42</span></div>
+    <div class="left">
+      <div class="brand">Pizza<span class="num"> 42</span></div>
+      <span class="greet">Hi, <span id="user-email"></span></span>
+    </div>
     <div class="who">
-      <span>Hi, <span id="user-email"></span></span>
+      <button class="btn-small" onclick="showPrivacy()">Privacy &amp; Data</button>
       <button class="btn-small" onclick="client.logout({logoutParams:{returnTo:location.origin}})">Log out</button>
     </div>
   </div>
@@ -229,11 +318,11 @@
             </div>
           </div>
 
-          <div class="field">
-            <div class="field-label">How many pizzas?</div>
+          <div class="field" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <div class="field-label" style="margin:0">How many?</div>
             <input id="qty" type="number" min="1" max="99" value="1"
-              style="width:90px;padding:10px 12px;border:2px solid #ece0d3;border-radius:12px;font:inherit;font-weight:600">
-            <span style="color:var(--muted);font-size:.85rem;margin-left:10px">Orders over $250 require step-up MFA at checkout.</span>
+              style="width:64px;padding:5px 8px;border:2px solid #ece0d3;border-radius:8px;font:inherit;font-weight:600;font-size:.85rem">
+            <span style="color:var(--muted);font-size:.75rem">Orders &gt; $250 trigger step-up MFA at checkout.</span>
           </div>
 
           <div class="price-line">
@@ -276,10 +365,112 @@
   </div>
 </div>
 
+<!-- ===================== PRIVACY & DATA ===================== -->
+<div id="view-privacy" hidden>
+  <div class="topbar">
+    <div class="left">
+      <div class="brand">Pizza<span class="num"> 42</span></div>
+      <span class="greet">Hi, <span id="user-email-privacy"></span></span>
+    </div>
+    <div class="who">
+      <button class="btn-small" onclick="showOrdering()">← Back to ordering</button>
+      <button class="btn-small" onclick="client.logout({logoutParams:{returnTo:location.origin}})">Log out</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="card">
+      <h2>Your Privacy &amp; Data</h2>
+      <p class="lead">Everything Pizza 42 holds about you, and your rights under the GDPR — exercise them here, any time.</p>
+
+      <div id="me-summary" class="priv-stats">
+        <div class="priv-stat"><div class="priv-stat-label">Loading…</div><div class="priv-stat-value">&nbsp;</div></div>
+      </div>
+
+      <div class="priv-art priv-art--rectify">
+        <div class="priv-art-head">
+          <span class="priv-badge">ART 16</span>
+          <span class="priv-art-title">Rectification — your preferred name</span>
+        </div>
+        <div class="priv-art-desc">
+          How would you like Pizza 42 to address you? Stored as Pizza 42's own copy — separate from your sign-in provider profile.
+        </div>
+        <div class="priv-art-ctl" style="display:flex;gap:8px;align-items:center">
+          <input id="me-name" type="text" placeholder="Your preferred name"
+            style="flex:1;padding:9px 12px;border:2px solid #d8d2c8;border-radius:10px;font:inherit;background:#fff">
+          <button class="btn-small" onclick="saveName()">Save</button>
+        </div>
+        <div id="me-name-status" class="priv-art-status"></div>
+        <div id="me-idp-name" class="priv-art-status"></div>
+      </div>
+
+      <div class="priv-art priv-art--consent">
+        <div class="priv-art-head">
+          <span class="priv-badge">ART 7</span>
+          <span class="priv-art-title">Marketing consent</span>
+        </div>
+        <div class="priv-art-desc">
+          Give or withdraw consent for marketing emails — as easily as you gave it.
+        </div>
+        <div class="priv-art-ctl">
+          <label style="display:flex;gap:10px;align-items:center;cursor:pointer;font-size:.92rem">
+            <input id="me-consent" type="checkbox" onchange="saveConsent()" style="width:18px;height:18px;cursor:pointer">
+            <span>I'd like Pizza 42 to send me offers and updates by email</span>
+          </label>
+        </div>
+        <div id="me-consent-meta" class="priv-art-status"></div>
+      </div>
+
+      <div class="priv-art priv-art--portability">
+        <div class="priv-art-head">
+          <span class="priv-badge">ART 20</span>
+          <span class="priv-art-title">Portability</span>
+        </div>
+        <div class="priv-art-desc">
+          A structured, machine-readable copy of everything Pizza 42 holds about you.
+        </div>
+        <div class="priv-art-ctl">
+          <button class="btn-small" onclick="downloadMyData()">⬇ Download my data (JSON)</button>
+        </div>
+      </div>
+
+      <div class="priv-art priv-art--access">
+        <div class="priv-art-head">
+          <span class="priv-badge">ART 15</span>
+          <span class="priv-art-title">Recent sign-ins</span>
+        </div>
+        <div class="priv-art-desc">
+          Your last few sign-ins — date, type, source IP and country.
+        </div>
+        <div id="me-logins" class="priv-art-ctl">—</div>
+      </div>
+
+      <div class="priv-art priv-art--erasure">
+        <div class="priv-art-head">
+          <span class="priv-badge">⚠ ART 17</span>
+          <span class="priv-art-title" style="color:#b01d2f">Danger zone — right to erasure</span>
+        </div>
+        <div class="priv-art-desc">
+          Type <strong>DELETE</strong> to permanently remove your Pizza 42 sign-in.
+          Order records may be retained under a separate legal basis (tax / dispute — Art 17(3)).
+        </div>
+        <div class="priv-art-ctl" style="display:flex;gap:8px;align-items:center">
+          <input id="me-delete-confirm" type="text" placeholder="Type DELETE"
+            style="flex:1;padding:9px 12px;border:2px solid #ffb1ba;border-radius:10px;font:inherit;background:#fff">
+          <button class="btn-ghost" style="padding:8px 16px;font-size:.85rem" onclick="deleteMe()">Delete my account</button>
+        </div>
+        <div id="me-delete-status" class="priv-art-status" style="color:#b01d2f"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.auth0.com/js/auth0-spa-js/2.18/auth0-spa-js.production.js"></script>
 
 <script>
-  const displayView = name => ['loading', 'error', 'authenticated', 'unauthenticated'].forEach(v => document.getElementById(`view-${v}`).hidden = v !== name);
+  const displayView = name => ['loading', 'error', 'authenticated', 'unauthenticated', 'privacy'].forEach(v => document.getElementById(`view-${v}`).hidden = v !== name);
+  function showPrivacy() { displayView('privacy'); loadMe(); }
+  function showOrdering() { displayView('authenticated'); }
   const setTextContent = (id, content) => document.getElementById(id).textContent = content;
 
   const PIZZA_PRICES = { Margherita: 10, Pepperoni: 12, Hawaiian: 13, Veggie: 11 };
@@ -348,6 +539,8 @@
     if (await window.client.isAuthenticated()) {
       const user = await window.client.getUser();
       setTextContent("user-email", user.email);
+      const pe = document.getElementById("user-email-privacy");
+      if (pe) pe.textContent = user.email;
       setTextContent("user-profile", JSON.stringify(user, null, 2));
       if (user.email_verified !== true) {
         document.getElementById("verify-banner").hidden = false;
@@ -400,7 +593,7 @@
       `<div class="kv"><b>Favorite topping:</b> ${stats.favoriteTopping ?? '—'}</div>` +
       `<div class="kv" style="margin-top:10px"><b>Last order:</b> ${prefs.lastPizza ?? '—'}, ${prefs.lastSize ?? '—'}, ${prefs.lastCrust ?? '—'} crust` +
       `${(prefs.lastToppings && prefs.lastToppings.length) ? ' + ' + prefs.lastToppings.join(', ') : ''}` +
-      ` @ ${prefs.lastStore ?? '—'}</div>`;
+      `${prefs.lastStore ? ' @ ' + prefs.lastStore : ''}</div>`;
   }
 
   async function showAccessToken() {
@@ -484,6 +677,126 @@
       setTextContent("order-history", JSON.stringify(orders, null, 2));
     } catch (err) {
       setTextContent("order-history", "Error: " + err.message);
+    }
+  }
+
+  // ---------- GDPR self-service: Your Privacy & Data page ----------
+  async function api(method, path, body) {
+    const token = await window.client.getTokenSilently();
+    return fetch(`${API_BASE}${path}`, {
+      method,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  }
+
+  async function loadMe() {
+    try {
+      const res = await api('GET', '/me');
+      if (!res.ok) {
+        document.getElementById('me-summary').textContent =
+          'Could not load your data (' + res.status + ').';
+        return;
+      }
+      const view = await res.json();
+      const p = view.profile || {};
+      const m = view.metadata || {};
+      const providers = (p.identities || []).map(i => i.provider).join(', ') || '—';
+      const verifiedMark = p.email_verified
+        ? '<small>✓ verified</small>'
+        : '<small class="bad">unverified</small>';
+      document.getElementById('me-summary').innerHTML =
+        `<div class="priv-stat"><div class="priv-stat-label">Email</div>` +
+          `<div class="priv-stat-value">${p.email ?? '—'} ${verifiedMark}</div></div>` +
+        `<div class="priv-stat"><div class="priv-stat-label">Sign-in via</div>` +
+          `<div class="priv-stat-value">${providers}</div></div>` +
+        `<div class="priv-stat"><div class="priv-stat-label">Orders held</div>` +
+          `<div class="priv-stat-value">${(m.orders || []).length}</div></div>` +
+        `<div class="priv-stat"><div class="priv-stat-label">Total sign-ins</div>` +
+          `<div class="priv-stat-value">${p.logins_count ?? 0}</div></div>`;
+      document.getElementById('me-name').value = m.preferred_name || p.name || '';
+      const idpNote = document.getElementById('me-idp-name');
+      if (idpNote) {
+        const conn = (p.identities && p.identities[0] && p.identities[0].connection) || '—';
+        idpNote.innerHTML = `Sign-in provider name (read-only, owned by <strong>${conn}</strong>): <em>${p.name ?? '—'}</em>`;
+      }
+      const consent = m.marketing_consent;
+      document.getElementById('me-consent').checked = consent?.marketing === true;
+      document.getElementById('me-consent-meta').textContent = consent
+        ? `Last changed ${new Date(consent.at).toLocaleString()} (${consent.source || 'self-service'}).`
+        : 'Not set — your default is opted-out.';
+      const logs = view.recent_logins || [];
+      const logsEl = document.getElementById('me-logins');
+      if (logs.length === 0) {
+        logsEl.innerHTML = '<span style="color:var(--muted);font-size:.82rem">Sign-in history will appear here once the M2M app has <code>read:logs</code>.</span>';
+      } else {
+        logsEl.innerHTML = '<ul class="priv-logins">' + logs.slice(0, 5).map(l => {
+          const when = new Date(l.date).toLocaleString();
+          const country = l.location && l.location.country ? l.location.country : '';
+          const ip = l.ip || '—';
+          const type = l.type || '';
+          return `<li><span class="priv-log-when">${when}</span>` +
+                 `<span class="priv-log-meta">${type} &middot; ${ip}${country ? ' &middot; ' + country : ''}</span></li>`;
+        }).join('') + '</ul>';
+      }
+    } catch (err) {
+      document.getElementById('me-summary').textContent = 'Error: ' + err.message;
+    }
+  }
+
+  async function saveName() {
+    const name = document.getElementById('me-name').value.trim();
+    const status = document.getElementById('me-name-status');
+    status.textContent = 'Saving…';
+    const res = await api('PATCH', '/me', { name });
+    if (res.ok) { status.textContent = 'Saved.'; loadMe(); }
+    else {
+      const e = await res.json().catch(() => ({}));
+      status.textContent = 'Error: ' + (e.message || e.error || res.status);
+    }
+  }
+
+  async function saveConsent() {
+    const checked = document.getElementById('me-consent').checked;
+    const meta = document.getElementById('me-consent-meta');
+    meta.textContent = 'Saving…';
+    const res = await api('POST', '/me/consent', { marketing: checked });
+    if (res.ok) loadMe();
+    else meta.textContent = 'Could not save consent change.';
+  }
+
+  async function downloadMyData() {
+    try {
+      const token = await window.client.getTokenSilently();
+      const res = await fetch(`${API_BASE}/me/export`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) { alert('Export failed (' + res.status + ').'); return; }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'pizza42-my-data.json';
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+    } catch (err) { alert('Export error: ' + err.message); }
+  }
+
+  async function deleteMe() {
+    const confirmInput = document.getElementById('me-delete-confirm').value;
+    const status = document.getElementById('me-delete-status');
+    if (confirmInput !== 'DELETE') {
+      status.textContent = 'Please type DELETE (uppercase) to confirm.';
+      return;
+    }
+    status.textContent = 'Deleting…';
+    const res = await api('DELETE', '/me');
+    if (res.ok) {
+      status.textContent = 'Account deleted. Signing you out…';
+      setTimeout(() => window.client.logout({ logoutParams: { returnTo: location.origin } }), 1200);
+    } else {
+      const e = await res.json().catch(() => ({}));
+      status.textContent = 'Could not delete: ' + (e.message || e.error || res.status) +
+        '  (the M2M app needs the delete:users scope).';
     }
   }
 </script>
