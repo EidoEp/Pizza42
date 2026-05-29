@@ -158,7 +158,7 @@ pizza42-api/
      trigger a transactional step-up in the SPA; the API records whether MFA
      was observed on the token (`amr` / custom claim).
   After all gates pass, the order is persisted to `user_metadata.orders` via
-  the Management API and the derived stats (`favouriteStore`, `lifetimeValue`,
+  the Management API and the derived stats (`favoriteStore`, `lifetimeValue`,
   etc.) are recomputed.
 - **`GET /orders`** - returns the calling customer's orders.
 - **`GET /me`**, **`GET /me/export`**, **`PATCH /me`**, **`POST /me/consent`**,

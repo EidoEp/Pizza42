@@ -26,6 +26,11 @@ for (const k of ['AUTH0_DOMAIN', 'AUTH0_AUDIENCE', 'AUTH0_M2M_CLIENT_ID', 'AUTH0
 
 const app = express();
 
+// Behind the Heroku router (and most PaaS/load balancers) the socket peer is the
+// proxy, not the browser. Trust the forwarding headers so req.ip resolves to the
+// real client address — used for the GDPR Art 7 marketing-consent audit trail.
+app.set('trust proxy', true);
+
 // CORS only matters when the SPA is served from a different origin (local dev
 // with http-server on :3000). In production Express serves the SPA itself, so
 // requests are same-origin and CORS never fires.
@@ -58,6 +63,9 @@ async function getUserMetadata(sub) {
 
 // Behavioral enrichment derived from the full order history. This is the
 // "data drives marketing" artifact: favorite topping/size, lifetime value.
+// Recomputes over the whole history on each order — O(n) per write, in-memory,
+// negligible at POC order counts. Production would fold the new order into
+// stored counts (or derive these in the Orders service) rather than re-tally.
 function computeStats(orders) {
   const mode = (counts) =>
     Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
@@ -318,7 +326,10 @@ app.use((err, _req, res, _next) => {
   if (err.status === 403) {
     return res.status(403).json({ error: 'forbidden', message: err.message });
   }
-  res.status(500).json({ error: 'server_error', message: err.message });
+  // Don't echo internal/SDK error text (scope names, rate-limit detail) to the
+  // client — it's already logged above. The 401/403 messages above come from the
+  // JWT middleware and are safe, client-facing.
+  res.status(500).json({ error: 'server_error', message: 'An unexpected error occurred.' });
 });
 
 app.listen(PORT, () => {

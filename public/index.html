@@ -31,6 +31,7 @@
     border-radius: 999px; font-weight: 600; transition: transform .08s, box-shadow .2s, background .2s;
   }
   button:active { transform: translateY(1px); }
+  button:disabled { opacity: .55; cursor: default; transform: none; }
   .btn-primary {
     background: var(--red); color: #fff; padding: 14px 28px; font-size: 1rem;
     box-shadow: 0 6px 16px rgba(214,37,59,.35);
@@ -326,7 +327,7 @@
           </div>
 
           <div class="price-line">
-            <button class="btn-primary" onclick="placeOrder()">Place Order — <span id="price-preview">$10.00</span></button>
+            <button id="place-btn" class="btn-primary" onclick="placeOrder()">Place Order — <span id="price-preview">$10.00</span></button>
             <span id="order-status"></span>
           </div>
         </div>
@@ -485,24 +486,13 @@
     return (isNaN(v) || v < 1) ? 1 : v;
   }
 
-  function selectedStore() {
-    return document.querySelector('input[name="store"]:checked').value;
-  }
-  function selectedPizza() {
-    return document.querySelector('input[name="pizza"]:checked').value;
-  }
-  function selectedSize() {
-    return document.querySelector('input[name="size"]:checked').value;
-  }
-  function selectedCrust() {
-    return document.querySelector('input[name="crust"]:checked').value;
-  }
+  const selectedRadio = name => document.querySelector(`input[name="${name}"]:checked`).value;
   function selectedToppings() {
     return [...document.querySelectorAll('.topping:checked')].map(el => el.value);
   }
   function computeTotal() {
-    const unit = PIZZA_PRICES[selectedPizza()]
-      + SIZE_UPCHARGE[selectedSize()]
+    const unit = PIZZA_PRICES[selectedRadio('pizza')]
+      + SIZE_UPCHARGE[selectedRadio('size')]
       + selectedToppings().length * TOPPING_PRICE;
     return unit * selectedQty();
   }
@@ -511,52 +501,62 @@
   }
 
   (async () => {
-    window.client = await auth0.createAuth0Client({
-      domain: 'dev-h0ag3zx80ah0xjeg.us.auth0.com',
-      clientId: 'OHqGBPsTAvH2F3aERXzzZqRNxL8TuRVi',
-      authorizationParams: {
-        redirect_uri: location.origin,
-        audience: 'https://pizza42-api',
-        scope: 'openid profile email create:orders',
-      },
-      cacheLocation: 'localstorage',
-      useRefreshTokens: true,
-    });
+    try {
+      window.client = await auth0.createAuth0Client({
+        domain: 'dev-h0ag3zx80ah0xjeg.us.auth0.com',
+        clientId: 'OHqGBPsTAvH2F3aERXzzZqRNxL8TuRVi',
+        authorizationParams: {
+          redirect_uri: location.origin,
+          audience: 'https://pizza42-api',
+          scope: 'openid profile email create:orders',
+        },
+        cacheLocation: 'localstorage',
+        useRefreshTokens: true,
+      });
 
-    if (location.search.includes("error=")) {
-      const params = new URLSearchParams(location.search);
-      setTextContent("view-error", `Error: ${params.get("error")} — ${params.get("error_description")}`);
-      displayView("error");
-      history.replaceState({}, "", location.pathname);
-      return;
-    }
-
-    if (location.search.includes("code=") && location.search.includes("state=")) {
-      await window.client.handleRedirectCallback();
-      history.replaceState({}, "", location.pathname);
-    }
-
-    if (await window.client.isAuthenticated()) {
-      const user = await window.client.getUser();
-      setTextContent("user-email", user.email);
-      const pe = document.getElementById("user-email-privacy");
-      if (pe) pe.textContent = user.email;
-      setTextContent("user-profile", JSON.stringify(user, null, 2));
-      if (user.email_verified !== true) {
-        document.getElementById("verify-banner").hidden = false;
+      if (location.search.includes("error=")) {
+        const params = new URLSearchParams(location.search);
+        setTextContent("view-error", `Error: ${params.get("error")} — ${params.get("error_description")}`);
+        displayView("error");
+        history.replaceState({}, "", location.pathname);
+        return;
       }
-      const claims = await window.client.getIdTokenClaims();
-      renderLatestOrder(claims["https://pizza42.com/orders"] ?? []);
-      renderEnrichment(claims);
-      document.querySelectorAll('input[name="pizza"], input[name="size"], .topping').forEach(el =>
-        el.addEventListener('change', refreshPrice));
-      document.getElementById('qty').addEventListener('input', refreshPrice);
-      refreshPrice();
-      displayView("authenticated");
-      return;
-    }
 
-    displayView("unauthenticated");
+      if (location.search.includes("code=") && location.search.includes("state=")) {
+        await window.client.handleRedirectCallback();
+        history.replaceState({}, "", location.pathname);
+      }
+
+      if (await window.client.isAuthenticated()) {
+        const user = await window.client.getUser();
+        setTextContent("user-email", user.email);
+        const pe = document.getElementById("user-email-privacy");
+        if (pe) pe.textContent = user.email;
+        setTextContent("user-profile", JSON.stringify(user, null, 2));
+        if (user.email_verified !== true) {
+          document.getElementById("verify-banner").hidden = false;
+        }
+        const claims = await window.client.getIdTokenClaims();
+        renderLatestOrder(claims["https://pizza42.com/orders"] ?? []);
+        renderEnrichment(claims);
+        document.querySelectorAll('input[name="pizza"], input[name="size"], .topping').forEach(el =>
+          el.addEventListener('change', refreshPrice));
+        document.getElementById('qty').addEventListener('input', refreshPrice);
+        refreshPrice();
+        displayView("authenticated");
+        return;
+      }
+
+      displayView("unauthenticated");
+    } catch (err) {
+      // A stale/replayed callback (refreshed ?code= URL, Back navigation, or a
+      // transaction-not-found) makes handleRedirectCallback throw. Show the error
+      // instead of hanging forever on the Loading screen.
+      console.error("Auth init failed:", err);
+      history.replaceState({}, "", location.pathname);
+      setTextContent("view-error", `Sign-in error: ${err.message}. Please reload the page to try again.`);
+      displayView("error");
+    }
   })();
 
   function renderLatestOrder(orders) {
@@ -605,27 +605,25 @@
     }
   }
 
+  // Posts with the caller-supplied token (the step-up token for high-value
+  // orders), so it passes it to api() explicitly rather than fetching one.
   async function postOrder(token, body) {
-    return fetch(`${API_BASE}/orders`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(body),
-    });
+    return api('POST', '/orders', body, token);
   }
 
   async function placeOrder() {
-    const store = selectedStore();
-    const pizza = selectedPizza();
-    const size = selectedSize();
-    const crust = selectedCrust();
+    const btn = document.getElementById('place-btn');
+    if (btn.disabled) return;            // ignore double-clicks while a request is in flight
+    const store = selectedRadio('store');
+    const pizza = selectedRadio('pizza');
+    const size = selectedRadio('size');
+    const crust = selectedRadio('crust');
     const toppings = selectedToppings();
     const quantity = selectedQty();
     const total = computeTotal();
     const highValue = total > MFA_THRESHOLD;
     const body = { store, pizza, size, crust, toppings, quantity, total };
+    btn.disabled = true;
     setTextContent("order-status", " Placing…");
     try {
       let token;
@@ -664,15 +662,14 @@
       loadOrders();
     } catch (err) {
       setTextContent("order-status", " Error: " + err.message);
+    } finally {
+      btn.disabled = false;
     }
   }
 
   async function loadOrders() {
     try {
-      const token = await window.client.getTokenSilently();
-      const res = await fetch(`${API_BASE}/orders`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api('GET', '/orders');
       const orders = await res.json();
       setTextContent("order-history", JSON.stringify(orders, null, 2));
     } catch (err) {
@@ -681,8 +678,8 @@
   }
 
   // ---------- GDPR self-service: Your Privacy & Data page ----------
-  async function api(method, path, body) {
-    const token = await window.client.getTokenSilently();
+  async function api(method, path, body, token) {
+    token = token || await window.client.getTokenSilently();
     return fetch(`${API_BASE}${path}`, {
       method,
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -749,8 +746,12 @@
     const status = document.getElementById('me-name-status');
     status.textContent = 'Saving…';
     const res = await api('PATCH', '/me', { name });
-    if (res.ok) { status.textContent = 'Saved.'; loadMe(); }
-    else {
+    if (res.ok) {
+      // Update from the response — no full /me refetch (3 Management API calls).
+      const body = await res.json().catch(() => ({}));
+      if (body.preferred_name != null) document.getElementById('me-name').value = body.preferred_name;
+      status.textContent = 'Saved.';
+    } else {
       const e = await res.json().catch(() => ({}));
       status.textContent = 'Error: ' + (e.message || e.error || res.status);
     }
@@ -761,16 +762,20 @@
     const meta = document.getElementById('me-consent-meta');
     meta.textContent = 'Saving…';
     const res = await api('POST', '/me/consent', { marketing: checked });
-    if (res.ok) loadMe();
-    else meta.textContent = 'Could not save consent change.';
+    if (res.ok) {
+      // Reflect the server's authoritative consent record — no full /me refetch.
+      const c = (await res.json().catch(() => ({}))).marketing_consent;
+      meta.textContent = c
+        ? `Last changed ${new Date(c.at).toLocaleString()} (${c.source || 'self-service'}).`
+        : 'Saved.';
+    } else {
+      meta.textContent = 'Could not save consent change.';
+    }
   }
 
   async function downloadMyData() {
     try {
-      const token = await window.client.getTokenSilently();
-      const res = await fetch(`${API_BASE}/me/export`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api('GET', '/me/export');
       if (!res.ok) { alert('Export failed (' + res.status + ').'); return; }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
